@@ -137,7 +137,7 @@ rocotorun -w rrfs.xml -d rrfs.db
     print(f'rrfs.xml and run_rocoto.sh created at:\n  {expdir}')
 # end of setup_xml
 
-    fPath=f"{expdir}/rs"
+    fPath = f"{expdir}/rs"
     with open(fPath, 'w') as rocotoFile:
         text = \
             f'''#!/usr/bin/env bash
@@ -193,7 +193,7 @@ rocotoboot -w rrfs.xml -d rrfs.db -c $cyctime -t $taskname
 
     fPath = f"{expdir}/rc"
     with open(fPath, 'w') as rocotoFile:
-        text= \
+        text = \
             f'''#!/usr/bin/env bash
 source /etc/profile
 module load rocoto
@@ -236,4 +236,4 @@ rocotorewind -w rrfs.xml -d rrfs.db -c $cyctime -t $taskname
     os.chmod(fPath, st.st_mode | stat.S_IEXEC)
 
     print(f'You can add to crontab:\n*/1 * * * * cd {expdir} && ./run_rocoto.sh && ./rs')
-### end of setup_xml
+# end of setup_xml
