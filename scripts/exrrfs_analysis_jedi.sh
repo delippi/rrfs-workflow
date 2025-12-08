@@ -160,11 +160,6 @@ if  [ ${ob_type} != "conv" ] || [ ${BKTYPE} -eq 1 ]; then #not using GDAS
   l_both_fv3sar_gfs_ens=.false.
 fi
 
-if [ -d "${bkpath}.jedi" ]; then
-  rm -rf "${bkpath}.jedi"
-fi
-rm -rf ${bkpath}.jedi
-cp -rL $bkpath ${bkpath}.jedi
 bkpath=${bkpath}.jedi
 
 #
@@ -589,9 +584,6 @@ cp analysis_jedi.fv_tracer.res.nc   ${bkpath}/fv_tracer.res.tile1.nc
 
 # Save the Jdiag files for diagnostic tools
 cp jdiag* ${COMOUT}
-
-# touch a file in INPUT.jedi its clear if jedi/gsi analysis restarts were used
-touch ${bkpath}/jedi
 
 #
 #-----------------------------------------------------------------------

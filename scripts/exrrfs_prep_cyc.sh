@@ -1238,6 +1238,25 @@ fi
 #
 #-----------------------------------------------------------------------
 #
+# create INPUT.gsi and INPUT.gsi for parallel run
+#
+#-----------------------------------------------------------------------
+#
+cd ${modelinputdir}
+if [ -d "${modelinputdir}.gsi" ]; then
+  rm -rf "${modelinputdir}.gsi"
+fi
+cp -rL ${modelinputdir} ${modelinputdir}.gsi
+touch ${modelinputdir}.gsi/gsi
+
+if [ -d "${modelinputdir}.jedi" ]; then
+  rm -rf "${modelinputdir}.jedi"
+fi
+cp -rL ${modelinputdir} ${modelinputdir}.jedi
+touch ${modelinputdir}.jedi/jedi
+#
+#-----------------------------------------------------------------------
+#
 # Print message indicating successful completion of script.
 #
 #-----------------------------------------------------------------------
