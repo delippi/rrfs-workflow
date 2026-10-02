@@ -407,6 +407,14 @@ for ioda_file in ioda*.nc; do
   fi
 done
 
+cp "${RDASAPP_DIR}"/parm/jcb-rdas/observations/atmosphere/tools/remap_ioda_variable.py .
+./remap_ioda_variable.py ioda_adpsfc.nc airTemperature airTemperatureAt2M --output ioda_adpsfc_at2m.nc
+./remap_ioda_variable.py ioda_msonet.nc airTemperature airTemperatureAt2M --output ioda_msonet_at2m.nc
+./remap_ioda_variable.py ioda_sfcshp.nc airTemperature airTemperatureAt2M --output ioda_sfcshp_at2m.nc
+./remap_ioda_variable.py ioda_adpsfc_at2m.nc specificHumidity specificHumidityAt2M --in-place
+./remap_ioda_variable.py ioda_msonet_at2m.nc specificHumidity specificHumidityAt2M --in-place
+./remap_ioda_variable.py ioda_sfcshp_at2m.nc specificHumidity specificHumidityAt2M --in-place
+
 # vadwnd thinning & superobbing
 export pgm="offline_vad_thinning.py"
 ./offline_vad_thinning.py -i ioda_vadwnd.nc -o ioda_vadwnd_thinned.nc >> $pgmout
