@@ -11,7 +11,7 @@ app_path_observation_chronicle: rdas/observation_chronicle/atmosphere
 
 # Places where we deviate from the generic file name of a yaml
 # ------------------------------------------------------------
-#final_increment_file: atmosphere_final_increment
+final_increment_file: atmosphere_final_increment
 output_file: atmosphere_output
 output_ensemble_increments_file: atmosphere_output_ensemble_increments_gaussian
 model_file: atmosphere_model_pseudo
@@ -79,6 +79,14 @@ state_variables_to_inverse:
 # -------
 do_testing: false
 
+# Include pressure in surface duplicate matching to reproduce current GSI behavior.
+#match_gsi_dup: false
+match_gsi_dup: true
+
+# Action used by surface DuplicateThinning filters: reduce obs space or reject.
+#duplicate_thinning_action: "reduce obs space"
+duplicate_thinning_action: "reject"
+
 # Model things
 # ------------
 fv3lam_nml: input_lam_C775_NP14X14.nml
@@ -117,7 +125,7 @@ state_variables:
 - cloud_liquid_water
 - ozone_mass_mixing_ratio
 - geopotential_at_surface
-- f10m
+- ratio_of_wind_at_surface_adjacent_layer_to_wind_at_10m
 - slmsk
 - sheleg
 - skin_temperature_at_surface
@@ -164,6 +172,7 @@ air_temperature_at_2m: t2m
 water_vapor_mixing_ratio_wrt_moist_air_at_2m: q2m
 eastward_wind_at_surface: u_srf
 northward_wind_at_surface: v_srf
+ratio_of_wind_at_surface_adjacent_layer_to_wind_at_10m: f10m
 
 
 # Background error
@@ -245,14 +254,14 @@ observations:
 - adpsfc_specificHumidityAt2M_181
 - adpsfc_specificHumidityAt2M_183
 - adpsfc_specificHumidityAt2M_187
-#- adpsfc_stationPressure_181
-#- adpsfc_stationPressure_187
+- adpsfc_stationPressure_181
+- adpsfc_stationPressure_187
 - adpsfc_winds_281
 - adpsfc_winds_284
 - adpsfc_winds_287
 - msonet_airTemperatureAt2M_188
 - msonet_specificHumidityAt2M_188
-#- msonet_stationPressure_188
+- msonet_stationPressure_188
 - msonet_winds_288
 
 - sfcshp_airTemperatureAt2M_180
@@ -261,8 +270,8 @@ observations:
 - sfcshp_specificHumidityAt2M_180
 - sfcshp_specificHumidityAt2M_182
 - sfcshp_specificHumidityAt2M_183
-#- sfcshp_stationPressure_180
-#- sfcshp_stationPressure_182
+- sfcshp_stationPressure_180
+- sfcshp_stationPressure_182
 - sfcshp_winds_280
 - sfcshp_winds_282
 - sfcshp_winds_284
