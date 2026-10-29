@@ -33,7 +33,7 @@ MACHINE=${MACHINE:-URSA}
 
 # Keep each DA experiment's ecFlow suites, work files, COM output, and archive separate. Use a
 # separate checkout for each experiment because setup_retro_links.sh writes generated config there.
-EXPT_ID=${EXPT_ID:-det_c13_3dvar_jedi_ecflow_test}
+EXPT_ID=${EXPT_ID:-det_c13_3dvar_jedi_baseline006}
 RRFS_SUITE=${RRFS_SUITE:-${EXPT_ID}}
 PRODCLONE_SUITE=${PRODCLONE_SUITE:-${RRFS_SUITE}_prod_clone}
 
@@ -88,7 +88,7 @@ DOMAIN=${DOMAIN:-RRFS_CONUS_13km}
 # Retro period and suite
 # ---------------------------------------------------------------------------------------------
 RETRO_START=${RETRO_START:-20240506}      # first retro day, and the day that cold starts
-RETRO_END=${RETRO_END:-20240506}          # last retro day
+RETRO_END=${RETRO_END:-20240512}          # last retro day
 # YES relaxes the suite's 399 clock-time triggers so cycles are not gated on the wall clock
 RETRO=${RETRO:-YES}
 
@@ -199,7 +199,7 @@ EXT_SONDE=${EXT_SONDE:-FALSE}
 NNODES_ANALYSIS_JEDI=${NNODES_ANALYSIS_JEDI:-2}
 PPN_ANALYSIS_JEDI=${PPN_ANALYSIS_JEDI:-98}
 TPP_ANALYSIS_JEDI=${TPP_ANALYSIS_JEDI:-1}
-WALLTIME_ANALYSIS_JEDI=${WALLTIME_ANALYSIS_JEDI:-00:50:00}
+WALLTIME_ANALYSIS_JEDI=${WALLTIME_ANALYSIS_JEDI:-00:05:00}
 # JEDI EnKF. DA_SYSTEM_ENKF picks which EnKF analysis runs, GSI or JEDI (GETKF), independent of
 # DA_SYSTEM_DET; the rest are read only when it is JEDI. setup_retro_links.sh writes them into
 # enkf/workflow.conf.
