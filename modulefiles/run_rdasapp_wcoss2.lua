@@ -8,6 +8,7 @@ whatis("Loads the WCOSS2 RDASApp oneAPI runtime libraries")
 
 -- Match the runtime selected by RDASApp/modulefiles/RDAS/wcoss2.intel.lua.
 prepend_path("MODULEPATH", "/apps/ops/test/spack-stack-nco-1.9/modulefiles/Core")
+load("stack-oneapi/2024.2.1")
 load("intel-oneapi-runtime/2024.2.1")
 
 -- RDASApp links MKL from this oneAPI installation, rather than Intel 19's MKL.
