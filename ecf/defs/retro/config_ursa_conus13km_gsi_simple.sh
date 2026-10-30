@@ -58,6 +58,7 @@ DEV_DATAROOT=${DEV_DATAROOT:-${RETRO_WORK_BASE}/stmp}
 # ---------------------------------------------------------------------------------------------
 PROJ=${PROJ:-fv3-cam}                     # account
 QUEUE=${QUEUE:-batch}                     # QOS
+QUEUE_ARCH=${QUEUE_ARCH:-${QUEUE}}         # Archive uses u1-service with this QoS
 PARTITION=${PARTITION:-u1-compute}
 # NCO keeps the production job sizes; EMC selects the smaller dev resources and the 52-node
 # forecast layouts, which is what fits Ursa's 75-node per-job limit.

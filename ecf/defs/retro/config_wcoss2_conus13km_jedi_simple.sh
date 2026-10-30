@@ -68,6 +68,7 @@ DEV_DATAROOT=${DEV_DATAROOT:-${RETRO_STMP_ROOT}/${EXPT_ID}}
 # ---------------------------------------------------------------------------------------------
 PROJ=${PROJ:-RRFS}                        # the cards add -DEV: "-A RRFS-DEV"
 QUEUE=${QUEUE:-dev}
+QUEUE_ARCH=${QUEUE_ARCH:-dev_transfer} # HPSS transfers use the WCOSS2 transfer queue
 # NCO keeps the production job sizes (115-node forecasts); EMC selects the smaller dev resources
 # and 52-node forecast layouts that EMC's WCOSS2 parallels run.
 RESOURCE_CONFIG=${RESOURCE_CONFIG:-EMC}
