@@ -58,10 +58,10 @@ module load py-cartopy/0.24.1
 export CARTOPY_DATA_DIR=${CARTOPY_DATA_DIR:-/scratch3/NCEPDEV/nems/role.epic/ursa/UFS_SRW_data/develop/NaturalEarth}
 fi
 
-# Give RDASApp the matching compiler runtime after loading the operational modules.
+# Load RDASApp's matching Python and compiler environment after the operational modules.
 if [ "${MACHINE}" = "WCOSS2" ]; then
-  module use "${HOMErrfs}/modulefiles"
-  module load run_rdasapp_wcoss2
+  module use "${HOMErrfs}/modulefiles/tasks/wcoss2"
+  module load run_ioda_bufr.local
 fi
 
 module list
