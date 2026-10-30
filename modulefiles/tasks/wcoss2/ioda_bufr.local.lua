@@ -1,10 +1,10 @@
 help([[
-Load the RDASApp WCOSS2 environment for JEDI analysis tasks.
+Load the RDASApp WCOSS2 environment for BUFR-to-IODA conversion tasks.
 ]])
 
 local rrfs_home = os.getenv("HOMErrfs")
 if not rrfs_home then
-  LmodError("HOMErrfs must be set before loading run_analysis_jedi.local")
+  LmodError("HOMErrfs must be set before loading ioda_bufr.local")
 end
 
 -- Use the same RDASApp stack Python and libraries used by the application build.
