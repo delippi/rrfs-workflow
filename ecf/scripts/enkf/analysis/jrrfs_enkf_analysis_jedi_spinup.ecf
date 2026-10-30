@@ -48,6 +48,12 @@ module load gsl/${gsl_ver}
 module load nco/${nco_ver}
 fi
 
+# Give RDASApp the matching compiler runtime after loading the operational modules.
+if [ "${MACHINE}" = "WCOSS2" ]; then
+  module use "${HOMErrfs}/modulefiles"
+  module load run_rdasapp_wcoss2
+fi
+
 module list
 export WGF="%WGF%"
 export CYCLE_TYPE="%CYCLE_TYPE%"
