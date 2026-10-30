@@ -171,10 +171,6 @@ copy_obs_file nexrad  l2rwbufr
 #
 #-----------------------------------------------------------------------
 #
-# RDASApp WCOSS2 builds use oneAPI MKL 2024.2; add its runtime libraries.
-if [ "${MACHINE}" = "WCOSS2" ]; then
-  export LD_LIBRARY_PATH="/pe/oneapi/mkl/2024.2/lib:${LD_LIBRARY_PATH:-}"
-fi
 export LD_LIBRARY_PATH="${RDASAPP_DIR}/build/lib64:${LD_LIBRARY_PATH}"
 
 export pgm="bufr2ioda.x"
