@@ -2,7 +2,7 @@
 #PBS -N rrfs_archive_retro_%CYC%
 #PBS -j oe
 #PBS -S /bin/bash
-#PBS -q %QUEUE%
+#PBS -q %QUEUE_ARCH%
 #PBS -A %PROJ%-%PROJENVIR%
 #PBS -l walltime=00:30:00
 #PBS -l place=vscatter:shared,select=1:ncpus=1:mem=16GB

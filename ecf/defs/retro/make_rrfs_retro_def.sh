@@ -30,6 +30,7 @@ done
 PACKAGEHOME=${PACKAGEHOME:-$(cd "${defs_dir}/../../.." && pwd)}
 c=${RETRO_DATA_ROOT}/com
 DEV_COMPATH=${DEV_COMPATH:-$c/gfs:$c/gefs:$c/obsproc:$c/nsst:$c/nosofs:$c/hrrr:$c/rap}
+QUEUE_ARCH=${QUEUE_ARCH:-${QUEUE}}
 DCOMROOT=${DCOMROOT:-${RETRO_DATA_ROOT}/dcom}
 
 awk \
@@ -41,6 +42,7 @@ awk \
     -v od="${OUTPUTDIR}" \
     -v proj="${PROJ}" \
     -v queue="${QUEUE}" \
+    -v queue_arch="${QUEUE_ARCH}" \
     -v part="${PARTITION:-}" \
     -v ptmp="${DEV_PTMP}" \
     -v droot="${DEV_DATAROOT}" \
@@ -83,7 +85,7 @@ awk \
     ed("PROJ", proj)
     ed("PROJENVIR", "DEV")
     ed("QUEUE", queue)
-    ed("QUEUE_ARCH", queue)
+    ed("QUEUE_ARCH", queue_arch)
     ed("OUTPUTDIR", od)
     # no product alerts from a retro; the WCOSS2 fake dbn_alert fails on any file it cannot find,
     # such as the NA subset that prdgen alerts on but a CONUS domain never writes
@@ -120,7 +122,7 @@ awk \
     if ($2 == "PACKAGEHOME") ed("PACKAGEHOME", ph)
     if ($2 == "PROJ")        ed("PROJ", proj)
     if ($2 == "QUEUE")       ed("QUEUE", queue)
-    if ($2 == "QUEUE_ARCH")  ed("QUEUE_ARCH", queue)
+    if ($2 == "QUEUE_ARCH")  ed("QUEUE_ARCH", queue_arch)
     if ($2 == "OUTPUTDIR")   ed("OUTPUTDIR", od)
     next
   }
