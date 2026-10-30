@@ -39,13 +39,21 @@ EXPT_ID=${EXPT_ID:-det_c13_3dvar_jedi_baseline006}
 RRFS_SUITE=${RRFS_SUITE:-${EXPT_ID}}
 PRODCLONE_SUITE=${PRODCLONE_SUITE:-${RRFS_SUITE}_prod_clone}
 
-# Keep persistent output under ptmp and job working files under stmp.
+# Keep model COM output under ptmp and job working files under stmp.
 RETRO_WORK_ROOT=${RETRO_WORK_ROOT:-/lfs/h2/emc/ptmp/${USER}/ecflow_rrfs}
 RETRO_WORK_BASE=${RETRO_WORK_BASE:-${RETRO_WORK_ROOT}/${EXPT_ID}}
 
 # ecflow job files and their output (the server creates the task directories underneath)
-ECF_HOME=${ECF_HOME:-${RETRO_WORK_BASE}/submit}
-OUTPUTDIR=${OUTPUTDIR:-${RETRO_WORK_BASE}/output}
+# Keep the shared server workspace and checkpoints on persistent noscrub storage.
+# The ecFlow software module also uses ECF_ROOT, so ECF_DATA_ROOT identifies our workspace.
+export ECF_DATA_ROOT=${ECF_DATA_ROOT:-/lfs/h2/emc/da/noscrub/${USER}/ecflow}
+export ECF_ROOT=${ECF_DATA_ROOT}
+export ECF_HOME=${ECF_HOME:-${ECF_DATA_ROOT}/submit}
+export ECF_OUTPUTDIR=${ECF_OUTPUTDIR:-${ECF_DATA_ROOT}/output}
+export ECF_COMDIR=${ECF_COMDIR:-${ECF_HOME}}
+export LFS_OUTPUTDIR=${LFS_OUTPUTDIR:-${ECF_HOME}}
+# Separate experiment output beneath the shared output directory.
+OUTPUTDIR=${OUTPUTDIR:-${ECF_OUTPUTDIR}/${EXPT_ID}}
 # COM output is rooted under this experiment's work base; the user and suite are appended.
 DEV_PTMP=${DEV_PTMP:-${RETRO_WORK_BASE}/ptmp}
 # job working directories (DATAROOT). In stmp rather than under RETRO_WORK_BASE, which is in
@@ -72,7 +80,8 @@ RESOURCE_CONFIG=${RESOURCE_CONFIG:-EMC}
 # production switch the other machine's hosts refuse the login. Its port is your uid + 2000.
 # ECFLOW_VER must be a version "module avail ecflow" lists, since every job loads it.
 ECFLOW_VER=${ECFLOW_VER:-5.6.0.14}
-ECFLOW_HOST=${ECFLOW_HOST:-cdecflow01}    # host running the server (head.h reads it as ECF_LOGHOST)
+ECFLOW_HOST=${ECFLOW_HOST:-${ECF_HOST:-cdecflow01}}    # host running the server (head.h reads it as ECF_LOGHOST)
+export ECF_HOST=${ECFLOW_HOST}
 
 # ---------------------------------------------------------------------------------------------
 # Input data
