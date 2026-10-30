@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Summarize retro cycle wall time, Slurm queue wait, and job runtime.
+"""Summarize retro cycle wall time, scheduler queue wait, and job runtime.
 
-The ecFlow attempt logs identify each submitted Slurm job by ECF_RID. Slurm accounting
-provides the submit, start, end, elapsed, and state fields needed to separate time spent
-waiting for a resource from time spent executing on the compute nodes.
+The ecFlow attempt logs identify each submitted job by ECF_RID. Slurm or PBS accounting
+provides submit, start, end, elapsed, and state fields for each job.
 """
 
 import argparse
@@ -35,12 +34,17 @@ PBS_SELECT_PATTERN = re.compile(r"^\s*#PBS\s+-l\s+select=(\d+)")
 
 
 def parse_timestamp(value):
-    """Parse Slurm's local timestamp, treating its unknown markers as missing."""
+    """Parse Slurm ISO and PBS qstat timestamps; unknown markers become missing."""
     if not value or value in {"Unknown", "None", "N/A", "(null)"}:
         return None
     try:
         return datetime.fromisoformat(value)
     except ValueError:
+        for date_format in ("%a %b %d %H:%M:%S %Y", "%a %b %d %H:%M:%S %Z %Y"):
+            try:
+                return datetime.strptime(value, date_format)
+            except ValueError:
+                pass
         return None
 
 
@@ -210,6 +214,72 @@ def query_sacct(job_ids):
     if not records and failures:
         raise RuntimeError("Could not read Slurm accounting: " + failures[0])
     return records, failures
+
+
+def query_qstat(job_ids):
+    """Query PBS job history and return records keyed by the numeric ecFlow job ID."""
+    if not shutil.which("qstat"):
+        raise RuntimeError("neither sacct nor qstat is available")
+
+    records = {}
+    failures = []
+    batch_size = 50
+    for start in range(0, len(job_ids), batch_size):
+        batch = job_ids[start:start + batch_size]
+        command = ["qstat", "-x", "-f", "-w", *batch]
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=90)
+        except (OSError, subprocess.SubprocessError) as error:
+            failures.append(str(error))
+            continue
+        if result.returncode != 0 and not result.stdout.strip():
+            failures.append(result.stderr.strip() or f"qstat exited {result.returncode}")
+            continue
+
+        job_id = None
+        attributes = {}
+
+        def save_record():
+            if not job_id:
+                return
+            short_id = job_id.split(".", 1)[0]
+            if short_id not in batch:
+                return
+            state_code = attributes.get("job_state", "")
+            state = {"Q": "PENDING", "H": "PENDING", "W": "PENDING",
+                     "R": "RUNNING", "E": "RUNNING", "F": "COMPLETED",
+                     "X": "CANCELLED"}.get(state_code, state_code or "UNKNOWN")
+            records[short_id] = {
+                "job_name": attributes.get("Job_Name", ""),
+                "submit": parse_timestamp(attributes.get("qtime")),
+                "start": parse_timestamp(attributes.get("stime")),
+                "end": parse_timestamp(attributes.get("obittime")),
+                "elapsed": parse_elapsed(attributes.get("resources_used.walltime")),
+                "state": state,
+            }
+
+        for line in result.stdout.splitlines():
+            header = re.match(r"^Job Id:\s*(\S+)", line)
+            if header:
+                save_record()
+                job_id = header.group(1)
+                attributes = {}
+                continue
+            attribute = re.match(r"^\s+([A-Za-z0-9_.]+)\s*=\s*(.*?)\s*$", line)
+            if attribute and job_id:
+                attributes[attribute.group(1)] = attribute.group(2)
+        save_record()
+
+    if not records and failures:
+        raise RuntimeError("Could not read PBS accounting: " + failures[0])
+    return records, failures
+
+
+def query_accounting(job_ids):
+    """Use Slurm accounting when available, otherwise query PBS job history."""
+    if shutil.which("sacct"):
+        return query_sacct(job_ids), "Slurm"
+    return query_qstat(job_ids), "PBS"
 
 
 def add_timing_fields(attempts, accounting, now):
@@ -539,14 +609,14 @@ def print_walltime_recommendations(recommendations):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Report retro wall time, Slurm queue wait, and per-job execution time."
+        description="Report retro wall time, scheduler queue wait, and per-job execution time."
     )
     parser.add_argument("--suite", required=True,
                         help="RRFS ecFlow suite name (defaults from the retro config)")
     parser.add_argument("--ecf-home", required=True,
                         help="ecFlow submit directory (defaults from the retro config)")
     parser.add_argument("--detail", action="store_true",
-                        help="list each Slurm job attempt after the summaries")
+                        help="list each scheduler job attempt after the summaries")
     args = parser.parse_args()
 
     suite_root = Path(args.ecf_home).expanduser() / args.suite
@@ -555,18 +625,18 @@ def main():
 
     attempts = find_attempts(suite_root)
     if not attempts:
-        sys.exit(f"No ecFlow attempt logs with Slurm job IDs found under {suite_root}")
+        sys.exit(f"No ecFlow attempt logs with scheduler job IDs found under {suite_root}")
 
     job_ids = sorted({attempt["job_id"] for attempt in attempts}, key=int)
     try:
-        accounting, failures = query_sacct(job_ids)
+        (accounting, failures), scheduler = query_accounting(job_ids)
     except RuntimeError as error:
         sys.exit(f"timings: {error}")
 
     now = datetime.now()
     rows = add_timing_fields(attempts, accounting, now)
     if not rows:
-        sys.exit("No attempt logs matched Slurm accounting records. Check accounting retention and job IDs.")
+        sys.exit(f"No attempt logs matched {scheduler} accounting records. Check accounting retention and job IDs.")
 
     matched = {row["job_id"] for row in rows}
     unmatched = [attempt for attempt in attempts if attempt["job_id"] not in matched]
@@ -583,7 +653,7 @@ def main():
 
     print(f"Retro timing report: /{args.suite}")
     print(f"Submit directory: {suite_root}")
-    print(f"EcFlow attempts found: {len(attempts)}; Slurm records matched: {len(rows)}; "
+    print(f"EcFlow attempts found: {len(attempts)}; {scheduler} records matched: {len(rows)}; "
           f"unmatched: {len(unmatched)}")
     if suite_state:
         print(f"EcFlow suite state: {suite_state}")
@@ -591,7 +661,7 @@ def main():
         if suite_in_progress:
             label = f"through report time; ecFlow suite {suite_state}"
         elif suite_state is None and unfinished_jobs:
-            label = "through report time; Slurm job still unfinished"
+            label = f"through report time; {scheduler} job still unfinished"
         elif suite_state:
             label = f"from first submit to last end; ecFlow suite {suite_state}"
         else:
@@ -611,12 +681,12 @@ def main():
         print(f"Timing extends through report time {now:%Y-%m-%d %H:%M:%S}.")
     if suite_state is None:
         print(f"Warning: could not query ecFlow suite state ({state_error}); "
-              "when no Slurm job is unfinished, the span may omit gaps between jobs.")
+              f"when no {scheduler} job is unfinished, the span may omit gaps between jobs.")
     if unmatched:
-        print("Warning: some logged job IDs were not returned by sacct; they are excluded "
+        print(f"Warning: some logged job IDs were not returned by {scheduler}; they are excluded "
               "from timing totals.")
     if failures:
-        print(f"Warning: {len(failures)} sacct batch query(s) failed; some jobs may be missing.")
+        print(f"Warning: {len(failures)} {scheduler} accounting query(s) failed; some jobs may be missing.")
 
     by_cycle = defaultdict(list)
     by_task = defaultdict(list)
