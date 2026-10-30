@@ -62,6 +62,10 @@ analysis with RRFS for the specified cycle.
 ulimit -s unlimited
 ulimit -a
 export OOPS_TRACE=0
+# RDASApp WCOSS2 builds use oneAPI MKL 2024.2; add its runtime libraries.
+if [ "${MACHINE}" = "WCOSS2" ]; then
+  export LD_LIBRARY_PATH="/pe/oneapi/mkl/2024.2/lib:${LD_LIBRARY_PATH:-}"
+fi
 export LD_LIBRARY_PATH="${RDASAPP_DIR}/build/lib64:${LD_LIBRARY_PATH}"
 
 # Job size. workflow.conf does not carry these yet, so the defaults are for the NA 3 km grid,

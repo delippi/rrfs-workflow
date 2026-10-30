@@ -211,6 +211,10 @@ export OMP_STACKSIZE=${OMP_STACKSIZE:-1024m}
 anlfile=${FORECAST_INPUT_PRODUCT}/fv_core.res.tile1.nc
 if [ ${WGF} = "enkf" ] && [ "${DA_SYSTEM_ENKF:-GSI}" = "JEDI" ] && [ -f ${anlfile} ] \
    && ncdump -h ${anlfile} | grep -q " ua_anl("; then
+  # RDASApp WCOSS2 builds use oneAPI MKL 2024.2; add its runtime libraries.
+  if [ "${MACHINE}" = "WCOSS2" ]; then
+    export LD_LIBRARY_PATH="/pe/oneapi/mkl/2024.2/lib:${LD_LIBRARY_PATH:-}"
+  fi
   export LD_LIBRARY_PATH="${RDASAPP_DIR:-${HOMErrfs}/sorc/RDASApp}/build/lib64:${LD_LIBRARY_PATH}"
   # Disable HDF5's advisory file locking to avoid intermittent failures
   export HDF5_USE_FILE_LOCKING=FALSE

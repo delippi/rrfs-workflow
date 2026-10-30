@@ -404,6 +404,8 @@ else
     anav_type="conv"
   fi
 fi
+# Retros need consistent 3DVAR analyses; do not use hybrid ensemble assimilation.
+ifhyb=.false.
 #
 #-----------------------------------------------------------------------
 #
@@ -992,7 +994,8 @@ else
   n_iolayouty=$(($IO_LAYOUT_Y))
 fi
 
-. ${USHrrfs}/gsiparm.anl.sh
+# The suite GSI fix tree links the standard file or contains the retro workaround copy.
+. "${FIX_GSI}/gsiparm.anl.sh"
 cat << EOF > gsiparm.anl
 $gsi_namelist
 EOF
@@ -1005,6 +1008,12 @@ EOF
 #
 #-----------------------------------------------------------------------
 #
+# Skip GSI for cold-start cycles when DO_DACOLD is disabled in the retro workflow config.
+if [[ "${DO_DACOLD}" = "FALSE" && "${BKTYPE}" -eq 1 ]]; then
+  echo "Not performing DA for cold cycles - do early clean exit"
+  exit 0
+fi
+
 gsi_exec="${EXECrrfs}/gsi.x"
 cpreq -p ${gsi_exec} ${DATA}/gsi.x
 
