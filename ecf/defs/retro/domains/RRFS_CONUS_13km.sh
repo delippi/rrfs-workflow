@@ -134,7 +134,7 @@ DOMAIN_SBATCH=(
   "jrrfs_ensf_forecast*:--nodes=1 --time=01:30:00"
   "jrrfs_ensf_post_*:--nodes=1"
   "jrrfs_ensf_recenter*:--nodes=1"
-  "jrrfs_archive_retro:--nodes=1 --time=00:12:00"
+  "jrrfs_archive_retro:--time=00:12:00"
   "jrrfs_clean:--nodes=1 --time=00:12:00"
   "jrrfs_clean_early:--nodes=1 --time=00:12:00"
   "jrrfs_det_forecast:--nodes=1 --time=00:12:00"
