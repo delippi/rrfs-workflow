@@ -578,7 +578,7 @@ EOF
   # With older-cycle trigger alternatives removed, these restart saves are not needed by a retro.
   # Keep the task nodes visible as set-aside, and rewrite references so they cannot enable fallback.
   ${skip} --mode ignore --label "older-cycle restart saves (retro)" \
-          --name 'jrrfs_det_save_restart_f[23]' \
+          --name 'jrrfs_det_save_restart_(f[23]|long_[23])' \
           --name 'jrrfs_enkf_save_restart_(mem[0-9]+_f[23]|f[23]_done)'
 
   # Keep the archive step in retro definitions only. Each deterministic cycle gets one task after
