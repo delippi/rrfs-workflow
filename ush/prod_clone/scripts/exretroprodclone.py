@@ -331,10 +331,11 @@ def write_status():
     if not os.path.exists(rrfsstat):
         return
     common = [sys.executable, rrfsstat, "--suite", RRFS_SUITE]
-    for args, name in (([], "rrfs_status.txt"),
-                       (["-t", "-s", "aborted,active,submitted,queued"], "rrfs_status_tasks.txt")):
+    # Both status files use the default live view, including retro progress. Full task
+    # and failure listings remain available in TASKS and DEAD.
+    for name in ("rrfs_status.txt", "rrfs_status_tasks.txt"):
         try:
-            subprocess.run(common + args + ["-o", os.path.join(STATUS_DIR, name)],
+            subprocess.run(common + ["-o", os.path.join(STATUS_DIR, name)],
                            check=False, timeout=120)
         except (OSError, subprocess.SubprocessError) as err:
             print(f"WARNING: could not write {name}: {err}")

@@ -8,6 +8,9 @@
 ecflow keeps the workflow state on the server, so this asks the server and prints it. By default
 it prints completion progress and currently running or batch-queued tasks; --tasks prints one line
 per task, like rocotostat does.
+The default view and generated stat/RUN files show progress across the matching clone suite's
+retro dates, excluding tasks set aside by the configuration. Without those dates, the progress
+line is explicitly limited to the loaded suite tasks.
 
   rrfsstat                          progress and running or batch-queued tasks
   rrfsstat -t                       every task, most interesting states first
@@ -39,6 +42,7 @@ simplified retro has been cut down the way it was meant to be.
 """
 
 import argparse
+from datetime import datetime
 import json
 import os
 import re
@@ -172,6 +176,42 @@ def collect(defs, suite, cycle_filter, state_filter, show_all=False):
     return rows
 
 
+def progress_counts(defs, suite, cycles):
+    """Count the full retro, including days whose task families have already been reused."""
+    rows = [r for r in collect(defs, suite, cycles, None, show_all=True) if not r["aside"]]
+    # The matching clone suite owns the experiment dates. Read them from the server so
+    # selecting another suite does not accidentally use the current config.sh dates.
+    settings = {}
+    for candidate in defs.suites:
+        values = {v.name(): v.value() for v in candidate.variables}
+        if values.get("RRFS_SUITE") == suite and values.get("RETRO_START") and values.get("RETRO_END"):
+            settings = values
+            break
+    try:
+        start = datetime.strptime(settings["RETRO_START"], "%Y%m%d").date()
+        end = datetime.strptime(settings["RETRO_END"], "%Y%m%d").date()
+        days = (end - start).days + 1
+        if days < 1:
+            raise ValueError("retro end precedes start")
+    except (KeyError, ValueError):
+        # Without the clone metadata, label the narrower scope rather than presenting
+        # one day's reusable tasks as the whole experiment.
+        return (sum(r["pdy"] != "-" and r["node_state"] == "complete" for r in rows),
+                len(rows), "loaded suite; retro dates unavailable")
+
+    completed = 0
+    for row in rows:
+        try:
+            current = datetime.strptime(row["pdy"], "%Y%m%d").date()
+        except ValueError:
+            continue  # This family has not been released yet.
+        # A family only advances after its previous date completes. Count those dates
+        # plus completed tasks at its current date, independent of inherited holds.
+        completed += max(0, min(days, (current - start).days))
+        completed += int(start <= current <= end and row["node_state"] == "complete")
+    return completed, len(rows) * days, f"retro {start:%Y%m%d} to {end:%Y%m%d}"
+
+
 def slurm_jobs():
     """Running and pending job names from squeue (Ursa) or qstat (WCOSS2), to show alongside the
     ecflow state, as {name: (state, elapsed)} with Slurm's state words."""
@@ -238,10 +278,14 @@ def print_tasks(rows, jobs, out):
     print(f"\n{len(rows)} task(s)", file=out)
 
 
-def print_live(rows, jobs, completed, total, out):
+def print_live(rows, jobs, progress, out):
     """Show completion progress and only running or batch-queued tasks."""
+    completed, total, scope = progress
     percent = 100.0 * completed / total if total else 0.0
-    print(f"Progress: {percent:.1f}% complete ({completed} of {total} configured tasks)\n", file=out)
+    filled = min(20, int(20 * completed / total)) if total else 0
+    bar = "#" * filled + "-" * (20 - filled)
+    print(f"Progress: [{bar}] {percent:.1f}% complete ({completed} / {total} tasks)", file=out)
+    print(f"Scope: {scope}\n", file=out)
     live = [r for r in rows if r["node_state"] in ("active", "submitted")]
     if live:
         print_tasks(live, jobs, out)
@@ -273,11 +317,11 @@ def display_state(r):
     return f"{state} (HELD)" if r["held"] else state
 
 
-def write_report(rows, jobs, directory, total):
+def write_report(rows, jobs, directory, total, progress):
     """Write stat, RUN and DEAD, the way the Rocoto workflow's stat script does.
 
-    stat  the full per-cycle listing (what --workflow prints)
-    RUN   what is moving: running, submitted and queued tasks, then a count of every state
+    stat  progress and running or batch-queued tasks (the default view)
+    RUN   the same live view, with an update timestamp
     DEAD  what needs a look: failed and unknown tasks, with their counts
     TASKS what this configuration runs at all, by type and by cycle (what --plan prints)
     """
@@ -285,25 +329,16 @@ def write_report(rows, jobs, directory, total):
     for r in rows:
         w = word_for(r)
         counts[w] = counts.get(w, 0) + 1
-    held_count = sum(1 for r in rows if r["held"])
     line = lambda r: f"{r['pdy']} {r['cycle']}  {r['task']}  {display_state(r)}"
 
     with open(os.path.join(directory, "stat"), "w") as f:
-        print_workflow(rows, jobs, f)
+        print_live(rows, jobs, progress, f)
 
     with open(os.path.join(directory, "TASKS"), "w") as f:
         print_plan(rows, jobs, f, total)
 
     with open(os.path.join(directory, "RUN"), "w") as f:
-        print("----------", file=f)
-        for w in ("RUNNING", "BATCH QUEUED", "READY"):
-            for r in rows:
-                if word_for(r) == w:
-                    print(line(r), file=f)
-        for w in ("DONE", "RUNNING", "BATCH QUEUED", "READY", "FAILED", "HELD", "SET-ASIDE", "UNKNOWN"):
-            # Held tasks are also counted under their underlying state above.
-            n = held_count + counts.get("HELD", 0) if w == "HELD" else counts.get(w, 0)
-            print(f"#{w.title() + ':':<15}{n}", file=f)
+        print_live(rows, jobs, progress, f)
         print(time.strftime("%a %b %d %H:%M:%S %Z %Y"), file=f)
 
     with open(os.path.join(directory, "DEAD"), "w") as f:
@@ -434,9 +469,10 @@ def main():
             rows = [r for r in rows if not r["aside"]]
         jobs = slurm_jobs()
         if a.report:
-            counts = write_report(rows, jobs, a.report, total)
+            progress = progress_counts(defs, suite, cycles)
+            counts = write_report(rows, jobs, a.report, total, progress)
             print(f"wrote stat, RUN and DEAD in {os.path.abspath(a.report)}: "
-                  + ", ".join(f"{n} {w.lower()}" for w, n in sorted(counts.items(), key=lambda kv: -kv[1])))
+                  + ", ".join(f"{counts.get(w, 0)} {w.lower()}" for w in ("RUNNING", "BATCH QUEUED")))
             if not a.loop:
                 break
             time.sleep(a.loop)
@@ -451,10 +487,7 @@ def main():
             elif a.tasks:
                 print_tasks(rows, jobs, out)
             else:
-                progress_rows = collect(defs, suite, cycles, None, show_all=True)
-                progress_rows = [r for r in progress_rows if not r["aside"]]
-                completed = sum(1 for r in progress_rows if r["node_state"] == "complete")
-                print_live(rows, jobs, completed, len(progress_rows), out)
+                print_live(rows, jobs, progress_counts(defs, suite, cycles), out)
         finally:
             if a.out:
                 out.close()
