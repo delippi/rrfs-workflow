@@ -279,7 +279,7 @@ def print_tasks(rows, jobs, out):
 
 
 def print_live(rows, jobs, progress, out):
-    """Show completion progress and only running or batch-queued tasks."""
+    """Show progress, live tasks, and a count of every state with an update timestamp."""
     completed, total, scope = progress
     percent = 100.0 * completed / total if total else 0.0
     filled = min(20, int(20 * completed / total)) if total else 0
@@ -291,6 +291,18 @@ def print_live(rows, jobs, progress, out):
         print_tasks(live, jobs, out)
     else:
         print("No running or batch-queued tasks.", file=out)
+    # The task list is filtered, but the footer still summarizes all supplied rows.
+    # An inherited hold overlays the underlying state rather than replacing its count.
+    counts = {}
+    for row in rows:
+        word = word_for(row)
+        counts[word] = counts.get(word, 0) + 1
+    held_count = sum(1 for row in rows if row["held"])
+    print("", file=out)
+    for word in ("DONE", "RUNNING", "BATCH QUEUED", "READY", "FAILED", "HELD", "SET-ASIDE", "UNKNOWN"):
+        count = counts.get(word, 0) + (held_count if word == "HELD" else 0)
+        print(f"#{word.title() + ':':<15}{count}", file=out)
+    print(time.strftime("%a %b %d %H:%M:%S %Z %Y"), file=out)
 
 
 def slurm_for(r, jobs):
@@ -339,7 +351,6 @@ def write_report(rows, jobs, directory, total, progress):
 
     with open(os.path.join(directory, "RUN"), "w") as f:
         print_live(rows, jobs, progress, f)
-        print(time.strftime("%a %b %d %H:%M:%S %Z %Y"), file=f)
 
     with open(os.path.join(directory, "DEAD"), "w") as f:
         print("----------", file=f)
