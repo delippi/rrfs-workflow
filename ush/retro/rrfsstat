@@ -6,9 +6,10 @@
 """Show the state of the RRFS ecflow suite as text, in the spirit of rocotostat.
 
 ecflow keeps the workflow state on the server, so this asks the server and prints it. By default
-it prints one line per cycle (a rollup); --tasks prints one line per task, like rocotostat does.
+it prints completion progress and currently running or batch-queued tasks; --tasks prints one line
+per task, like rocotostat does.
 
-  rrfsstat                          rollup of every released cycle
+  rrfsstat                          progress and running or batch-queued tasks
   rrfsstat -t                       every task, most interesting states first
   rrfsstat -w                       every task in workflow order, grouped by cycle
   rrfsstat -p                       every task the configuration will run, and its state
@@ -237,6 +238,17 @@ def print_tasks(rows, jobs, out):
     print(f"\n{len(rows)} task(s)", file=out)
 
 
+def print_live(rows, jobs, completed, total, out):
+    """Show completion progress and only running or batch-queued tasks."""
+    percent = 100.0 * completed / total if total else 0.0
+    print(f"Progress: {percent:.1f}% complete ({completed} of {total} configured tasks)\n", file=out)
+    live = [r for r in rows if r["node_state"] in ("active", "submitted")]
+    if live:
+        print_tasks(live, jobs, out)
+    else:
+        print("No running or batch-queued tasks.", file=out)
+
+
 def slurm_for(r, jobs):
     """The Slurm state of this task's job, matched on the job name the ecf card builds.
 
@@ -439,7 +451,10 @@ def main():
             elif a.tasks:
                 print_tasks(rows, jobs, out)
             else:
-                print_rollup(rows, jobs, out)
+                progress_rows = collect(defs, suite, cycles, None, show_all=True)
+                progress_rows = [r for r in progress_rows if not r["aside"]]
+                completed = sum(1 for r in progress_rows if r["node_state"] == "complete")
+                print_live(rows, jobs, completed, len(progress_rows), out)
         finally:
             if a.out:
                 out.close()
