@@ -33,7 +33,7 @@ DOMAIN=${DOMAIN:-RRFS_NA_3km}
 # Everything this run produces hangs off one base directory.
 # A week of NA 3 km output is tens of TB, so the default is ptmp; note its purge policy.
 # Give this experiment its own suite, work area, and archive directory.
-EXPT_ID=${EXPT_ID:-det_na3km_jedi_simple}
+EXPT_ID=${EXPT_ID:-det_na3km_3dvar_jedi_simple}
 RRFS_SUITE=${RRFS_SUITE:-${EXPT_ID}}     # suite name in the generated definition
 PRODCLONE_SUITE=${PRODCLONE_SUITE:-${RRFS_SUITE}_prod_clone}
 RETRO_WORK_ROOT=${RETRO_WORK_ROOT:-/lfs/h2/emc/ptmp/${USER}/ecflow_rrfs}
