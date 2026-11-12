@@ -1,19 +1,13 @@
 #!/bin/bash
 #
-# Sample settings for a simplified RRFS_CONUS_13km GSI retro on WCOSS2.
-# only, with the ensemble for the hybrid analysis read from a staged one rather than produced by
-# this suite.
+# Simple deterministic GSI retro on WCOSS2.
 #
-# It is config_wcoss2_conus13km.sh with the "Simplified workflow" block below added and
-# the EnKF and ensemble forecast switched off; everything above that block is the same, so change
-# the paths and account in the first blocks to your own as usual. It follows the Rocoto workflow's
-# ush/sample_configs/RRFS_v1.2/config_rrfs_c_13km_det_retro_simple_tuv_dbz_gsi.sh as closely as
-# the two workflows allow; the block below says where they differ.
+# Link or copy this configuration to ecf/defs/retro/config.sh and adjust paths and server.
 #
 # This is the ecflow equivalent of the Rocoto workflow's ush/config.sh, for the parts we control.
 # It is sourced by ush/retro/setup_retro_links.sh, ecf/defs/retro/make_rrfs_retro_def.sh,
 # ush/prod_clone/make_retro_def.sh and ush/retro/start_retro.sh, so edit values here instead of
-# passing them on every command line. Anything already set in the environment wins, so one-off runs
+# passing them on every command line. Most settings honor environment overrides, so one-off runs
 # can still say e.g.
 #
 #   RETRO_START=20240510 ./make_rrfs_retro_def.sh
@@ -34,7 +28,8 @@ MACHINE=${MACHINE:-WCOSS2}
 # ---------------------------------------------------------------------------------------------
 # Where the workflow writes
 # ---------------------------------------------------------------------------------------------
-# Give each experiment its own suite, COM output, work files, and archive path.
+# Give this experiment its own suite, work area, and archive directory. NA 3 km output can
+# require tens of TB per week; the default ptmp location has a purge policy.
 EXPT_ID=${EXPT_ID:-det_c13_3dvar_gsi_baseline006}
 RRFS_SUITE=${RRFS_SUITE:-${EXPT_ID}}
 PRODCLONE_SUITE=${PRODCLONE_SUITE:-${RRFS_SUITE}_prod_clone}
@@ -96,90 +91,57 @@ FIX_RRFS_DIR=${FIX_RRFS_DIR:-/lfs/h1/ops/prod/packages/rrfs.v1.0.28/fix}
 FIX_RRFS_SHARED=${FIX_RRFS_SHARED:-/lfs/h2/emc/lam/noscrub/emc.lam/FIX_RRFS}
 # staged upstream data in NCO COM/DCOM layout (see make_links.sh in that directory)
 RETRO_DATA_ROOT=${RETRO_DATA_ROOT:-/lfs/h2/emc/lam/noscrub/samuel.degelia/RRFS_RETRO_DATA_NCO}
-# Coarser domains (strip when merging to the nco branch): the model domain. RRFS_NA_3km
-# is the operational v1 domain and changes nothing; any other value needs
-# ecf/defs/retro/domains/<DOMAIN>.sh with its grid, fix files and job sizes.
 DOMAIN=${DOMAIN:-RRFS_CONUS_13km}
 
 # ---------------------------------------------------------------------------------------------
 # Retro period and suite
 # ---------------------------------------------------------------------------------------------
-RETRO_START=${RETRO_START:-20240506}      # first retro day, and the day that cold starts
-RETRO_END=${RETRO_END:-20240512}          # last retro day
 # Cycles run at once; increasing beyond 2 could break satbias cycling
 # Chains run back to back below 13; 13 or more lets the next chain start alongside the current one
+RETRO_START=${RETRO_START:-20240506}      # first retro day, and the day that cold starts
+RETRO_END=${RETRO_END:-20240506}          # last retro day
 CYCLE_THROTTLE=${CYCLE_THROTTLE:-2}
 # YES relaxes the suite's 399 clock-time triggers so cycles are not gated on the wall clock
 RETRO=${RETRO:-YES}
 
-# Which workflow groups to run. FALSE gives that group's families defstatus complete, so they
-# never run and nothing waiting on them blocks. Operations runs all of them.
-# The EnKF is off: this retro reads a staged ensemble instead (RRFSE_NWGES below), which is what
-# makes it worth running on its own. The ensemble forecast recenters on EnKF output, so it goes
-# with it.
+# Which workflow groups to run. FALSE gives that group's families defstatus complete.
+# The ensemble forecast recenters on EnKF output; a disabled EnKF can use staged data instead.
+# The CONUS 13 km domain cannot run fire weather because it does not write hour-0 natlev output.
 RUN_ENKF=${RUN_ENKF:-FALSE}
 RUN_ENSF=${RUN_ENSF:-FALSE}
-# Fire weather starts from the parent forecast's hour-0 natlev file, which this domain's 90 s
-# step never writes, so it cannot run here; the generator refuses TRUE.
 RUN_FIREWX=${RUN_FIREWX:-FALSE}
 
 # Two task types no retro needs; off as on Ursa. Both may work on WCOSS2, where operations
 # runs them.
 RUN_GEMPAK=${RUN_GEMPAK:-FALSE}
 RUN_BUFRSND=${RUN_BUFRSND:-FALSE}
-# Coarser domains (strip when merging to the nco branch): smoke and dust need
-# fix/smoke_dust/<grid>/grid_in.nc, which dev-sci provides for the 3 km grids but not for
-# RRFS_CONUS_13km, where process_smoke fails with FileNotFoundError on that file. The default is
-# TRUE, so the NA sample is unaffected.
-RUN_SMOKE=${RUN_SMOKE:-FALSE}
 
-# The deterministic forecast at 00z, 06z, 12z and 18z (FCST_LEN_HRS_LONG below, 84 h in
-# operations), with its post, product generation and restarts. FALSE leaves the hourly forecasts
-# (FCST_LEN_HRS) alone. At the operational lengths it is the one setting that shortens a retro
-# noticeably, the long forecast being 67 of the 81 minutes on each 6-hourly family's critical
-# path; shortening it with FCST_LEN_HRS_LONG instead, as here, buys most of that and keeps the
-# four long cycles honest. Fire weather takes its initial and boundary conditions from the long
-# forecast's post, so RUN_FIREWX must be FALSE as well, and the generator says so if it is not.
+# Controls the 00, 06, 12, and 18z deterministic forecasts; FCST_LEN_HRS_LONG sets their length.
+# Fire weather requires these forecasts.
 DO_LONG_FORECAST=${DO_LONG_FORECAST:-TRUE}
 
-# ---------------------------------------------------------------------------------------------
-# Simplified workflow
-# ---------------------------------------------------------------------------------------------
-# What follows cuts the suite down to the deterministic cycling run the Rocoto retros call a
-# simple configuration (ush/sample_configs/RRFS_v1.2 in the Rocoto workflow).
-# ecf/defs/retro/make_rrfs_retro_def.sh takes the tasks out of the suite definition and
-# ush/retro/setup_retro_links.sh turns the matching switches off in fix/workflow/det/workflow.conf,
-# both from the settings here, so the two halves cannot disagree.
-#
-# A task switched off here is given "defstatus complete", and every trigger that named it is
-# rewritten: a step taken out of the middle of a chain hands on its own dependencies, so what
-# followed it keeps its place in the order rather than starting as soon as the cycle opens.
-
-# The deterministic spin-up cycles (03-08z and 15-20z in operations) and their 1 h forecasts.
-# With them off, the cold start moves into the production cycle at DET_COLD_START_HRS, which
-# exrrfs_prep_cyc.sh and exrrfs_process_radar.sh already do when DO_SPINUP is FALSE.
+# Simplified deterministic workflow settings. Disabled tasks pass their dependencies to the
+# following tasks; setup_retro_links.sh applies the matching workflow switches.
+# Smoke and dust need fix/smoke_dust/<grid>/grid_in.nc: available for NA 3 km but
+# unavailable for CONUS 13 km, where process_smoke would fail.
+RUN_SMOKE=${RUN_SMOKE:-FALSE}
+# Spin-up cycles and their forecasts; without them, cold starts use DET_COLD_START_HRS.
 DO_SPINUP=${DO_SPINUP:-FALSE}
-DET_COLD_START_HRS=${DET_COLD_START_HRS:-"03 15"}
-# Cold starts read the GFS cycle 3 h earlier (6 for 00/12z); grib2 reads gfs.tHHz.pgrb2.0p25.fHHH
-EXTRN_MDL_ICS_OFFSET_HRS=${EXTRN_MDL_ICS_OFFSET_HRS:-3}
-GFS_FILE_FMT_ICS=${GFS_FILE_FMT_ICS:-}
+DET_COLD_START_HRS=${DET_COLD_START_HRS:-"00 12"}
+EXTRN_MDL_ICS_OFFSET_HRS=${EXTRN_MDL_ICS_OFFSET_HRS:-6}
+GFS_FILE_FMT_ICS=${GFS_FILE_FMT_ICS:-grib2}
 DO_SURFACE_CYCLE=${DO_SURFACE_CYCLE:-FALSE}
-
-# Forecast length in hours: the hourly cycles, and the 00, 06, 12 and 18z cycles. Operations runs
-# 18 and 84. The post, product generation and boundary jobs past the end of the forecast come out
-# of the definition, so these are what make a retro day short rather than just lighter. Three
-# hours is the minimum: each cycle warm starts from the hour 1, 2 or 3 restart of one of the
-# three cycles before it.
+# Forecast lengths in hours for hourly and 00, 06, 12, and 18z cycles. Three hours is the
+# minimum for warm starts from the previous three cycles.
 FCST_LEN_HRS=${FCST_LEN_HRS:-3}
-FCST_LEN_HRS_LONG=${FCST_LEN_HRS_LONG:-12}
-
-# Steps inside a cycle, each the ecflow side of one of the FALSE switches in the Rocoto config.sh.
-RUN_NONVARCLD=${RUN_NONVARCLD:-FALSE}     # non-variational cloud analysis (DO_NONVAR_CLDANAL)
-RUN_UPDATE_BC=${RUN_UPDATE_BC:-FALSE}     # boundary update and soil adjustment (DO_UPDATE_BC)
-RUN_GSIDIAG=${RUN_GSIDIAG:-TRUE}          # offline GSI diagnostics (DO_GSIDIAG_OFFLINE)
-RUN_LIGHTNING=${RUN_LIGHTNING:-FALSE}     # GLM flash extent density and its DA (DO_GLM_FED_DA)
-DO_RADDA=${DO_RADDA:-FALSE}               # Keep satellite radiance DA off by default.
-RUN_RADAR=${RUN_RADAR:-FALSE}              # Keep radar DA off by default for simple comparisons.
+FCST_LEN_HRS_LONG=${FCST_LEN_HRS_LONG:-3}
+# Switch individual deterministic cycle steps on or off.
+RUN_NONVARCLD=${RUN_NONVARCLD:-FALSE}  # non-variational cloud analysis (DO_NONVAR_CLDANAL)
+RUN_UPDATE_BC=${RUN_UPDATE_BC:-FALSE}  # boundary update and soil adjustment (DO_UPDATE_BC)
+RUN_GSIDIAG=${RUN_GSIDIAG:-TRUE}  # offline GSI diagnostics (DO_GSIDIAG_OFFLINE)
+RUN_LIGHTNING=${RUN_LIGHTNING:-FALSE}  # GLM flash extent density and DA (DO_GLM_FED_DA)
+DO_RADDA=${DO_RADDA:-FALSE}  # satellite radiance DA
+RUN_RADAR=${RUN_RADAR:-FALSE}  # radar DA
 # Match GSI observation selection to radar processing unless the experiment sets OB_TYPE directly.
 if [ -z "${OB_TYPE:-}" ]; then
   if [ "${RUN_RADAR}" = "TRUE" ]; then
@@ -188,28 +150,44 @@ if [ -z "${OB_TYPE:-}" ]; then
     OB_TYPE=conv
   fi
 fi
-RUN_POST=${RUN_POST:-TRUE}                # post and products; FALSE for a DA-only run
+RUN_POST=${RUN_POST:-TRUE}  # post and products; FALSE for a DA-only run
 # The simple retro only needs on-the-hour deterministic post outputs.
 RUN_SUBHOURLY_POST=${RUN_SUBHOURLY_POST:-FALSE}
 # Archive completed deterministic cycles separately for each experiment.
 DO_ARCHIVE_RETRO=${DO_ARCHIVE_RETRO:-TRUE}
-ARCHIVE_ROOT=${ARCHIVE_ROOT:-/NCEPDEV/emc-meso/5year/${USER}/RRFSv1/May2024_retro/v1.2.0}
+# HPSS may require the RDHPCS account spelling rather than the WCOSS2 username.
+RDHPCS_USER=${RDHPCS_USER:-Donald.E.Lippi}
+ARCHIVE_ROOT=${ARCHIVE_ROOT:-/NCEPDEV/emc-meso/5year/${RDHPCS_USER}/RRFSv1/May2024_retro/v1.2.0}
 ARCHIVEDIR=${ARCHIVEDIR:-${ARCHIVE_ROOT}/${EXPT_ID}}
 # JEDI analysis, the Rocoto config.sh "JEDI options". DA_SYSTEM_DET picks which det analysis
 # runs, GSI (the operational route) or JEDI; the rest are read only when it is JEDI.
 # setup_retro_links.sh writes them into det/workflow.conf and make_rrfs_retro_def.sh sizes the
 # job from them.
 DA_SYSTEM_DET=${DA_SYSTEM_DET:-GSI}
-# JCB templates in parm/jedi that the analysis renders its yaml from, conventional and
-# reflectivity. The conventional one decides 3DVar or hybrid: for hybrid 3DEnVar with the
-# 30 EnKF members use rdas-atmosphere-templates-fv3_c13_hybrid.yaml.
+# JCB templates in parm/jedi select the conventional and reflectivity analyses. The CONUS
+# grid also has a hybrid template; the NA 3 km grid currently has a 3DVar template.
 JCB_CONFIG_CONV=${JCB_CONFIG_CONV:-rdas-atmosphere-templates-fv3_c13.yaml}
 JCB_CONFIG_DBZ=${JCB_CONFIG_DBZ-rdas-atmosphere-templates-fv3_c13_dbz.yaml}
 # Whether the analysis also runs on cold-start cycles, and whether synthetic radiosonde
 # temperature and humidity levels are added the way GSI's sonde_ext does
 DO_DACOLD=${DO_DACOLD:-FALSE}
-EXT_SONDE=${EXT_SONDE:-FALSE}
-# Job size. Nodes x tasks per node must match the template's layout,
+EXT_SONDE=${EXT_SONDE:-TRUE}
+# JEDI job size: nodes x tasks per node must match the template layout.
+# CONUS 13 km uses 14x14 (196 tasks); NA 3 km uses 40x40 (1600 tasks).
+NNODES_ANALYSIS_JEDI=${NNODES_ANALYSIS_JEDI:-2}
+PPN_ANALYSIS_JEDI=${PPN_ANALYSIS_JEDI:-98}
+TPP_ANALYSIS_JEDI=${TPP_ANALYSIS_JEDI:-1}
+WALLTIME_ANALYSIS_JEDI=${WALLTIME_ANALYSIS_JEDI:-00:12:00}
+# JEDI EnKF. DA_SYSTEM_ENKF picks which EnKF analysis runs, GSI or JEDI (GETKF), independent of
+# DA_SYSTEM_DET; the rest are read only when it is JEDI. setup_retro_links.sh writes them into
+# enkf/workflow.conf.
+DA_SYSTEM_ENKF=${DA_SYSTEM_ENKF:-GSI}
+JCB_CONFIG_ENKF=${JCB_CONFIG_ENKF:-rdas-atmosphere-templates-fv3_c13_getkf.yaml}
+NNODES_ANALYSIS_ENKF_JEDI=${NNODES_ANALYSIS_ENKF_JEDI:-4}
+PPN_ANALYSIS_ENKF_JEDI=${PPN_ANALYSIS_ENKF_JEDI:-40}
+TPP_ANALYSIS_ENKF_JEDI=${TPP_ANALYSIS_ENKF_JEDI:-1}
+WALLTIME_ANALYSIS_ENKF_JEDI=${WALLTIME_ANALYSIS_ENKF_JEDI:-01:00:00}
+
 # Walltimes for the 13 km retro tasks. These config values override the task-card defaults.
 WALLTIME_ARCHIVE_RETRO=${WALLTIME_ARCHIVE_RETRO:-00:12:00}
 WALLTIME_CLEAN=${WALLTIME_CLEAN:-00:12:00}
@@ -226,22 +204,6 @@ WALLTIME_DET_PREP_CYC=${WALLTIME_DET_PREP_CYC:-00:12:00}
 WALLTIME_DET_PROCESS_BUFR=${WALLTIME_DET_PROCESS_BUFR:-00:12:00}
 WALLTIME_DET_SAVE_RESTART=${WALLTIME_DET_SAVE_RESTART:-00:12:00}
 WALLTIME_DET_SAVE_RESTART_LONG=${WALLTIME_DET_SAVE_RESTART_LONG:-00:12:00}
-
-
-# the 14x14 layout in the c13 templates: 196 tasks
-NNODES_ANALYSIS_JEDI=${NNODES_ANALYSIS_JEDI:-2}
-PPN_ANALYSIS_JEDI=${PPN_ANALYSIS_JEDI:-98}
-TPP_ANALYSIS_JEDI=${TPP_ANALYSIS_JEDI:-1}
-WALLTIME_ANALYSIS_JEDI=${WALLTIME_ANALYSIS_JEDI:-00:12:00}
-# JEDI EnKF. DA_SYSTEM_ENKF picks which EnKF analysis runs, GSI or JEDI (GETKF), independent of
-# DA_SYSTEM_DET; the rest are read only when it is JEDI. setup_retro_links.sh writes them into
-# enkf/workflow.conf.
-DA_SYSTEM_ENKF=${DA_SYSTEM_ENKF:-GSI}
-JCB_CONFIG_ENKF=${JCB_CONFIG_ENKF:-rdas-atmosphere-templates-fv3_c13_getkf.yaml}
-NNODES_ANALYSIS_ENKF_JEDI=${NNODES_ANALYSIS_ENKF_JEDI:-4}
-PPN_ANALYSIS_ENKF_JEDI=${PPN_ANALYSIS_ENKF_JEDI:-40}
-TPP_ANALYSIS_ENKF_JEDI=${TPP_ANALYSIS_ENKF_JEDI:-1}
-WALLTIME_ANALYSIS_ENKF_JEDI=${WALLTIME_ANALYSIS_ENKF_JEDI:-01:00:00}
 
 # Anything else to leave out, as space-separated regular expressions matching whole task names
 SKIP_TASKS=${SKIP_TASKS:-}
