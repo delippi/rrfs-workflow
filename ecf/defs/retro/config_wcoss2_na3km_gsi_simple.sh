@@ -100,6 +100,9 @@ DOMAIN=${DOMAIN:-RRFS_NA_3km}
 # Chains run back to back below 13; 13 or more lets the next chain start alongside the current one
 RETRO_START=${RETRO_START:-20240506}      # first retro day, and the day that cold starts
 RETRO_END=${RETRO_END:-20240506}          # last retro day
+# Debug through the 01z analysis using the 00z cold-start forecast.
+RETRO_END_HOUR=${RETRO_END_HOUR:-01}
+STOP_AFTER_ANALYSIS=${STOP_AFTER_ANALYSIS:-TRUE}
 CYCLE_THROTTLE=${CYCLE_THROTTLE:-2}
 # YES relaxes the suite's 399 clock-time triggers so cycles are not gated on the wall clock
 RETRO=${RETRO:-YES}
@@ -124,13 +127,13 @@ DO_LONG_FORECAST=${DO_LONG_FORECAST:-TRUE}
 # following tasks; setup_retro_links.sh applies the matching workflow switches.
 # Smoke and dust need fix/smoke_dust/<grid>/grid_in.nc: available for NA 3 km but
 # unavailable for CONUS 13 km, where process_smoke would fail.
-RUN_SMOKE=${RUN_SMOKE:-FALSE}
+RUN_SMOKE=${RUN_SMOKE:-TRUE}
 # Spin-up cycles and their forecasts; without them, cold starts use DET_COLD_START_HRS.
 DO_SPINUP=${DO_SPINUP:-FALSE}
 DET_COLD_START_HRS=${DET_COLD_START_HRS:-"00 12"}
 EXTRN_MDL_ICS_OFFSET_HRS=${EXTRN_MDL_ICS_OFFSET_HRS:-6}
 GFS_FILE_FMT_ICS=${GFS_FILE_FMT_ICS:-grib2}
-DO_SURFACE_CYCLE=${DO_SURFACE_CYCLE:-FALSE}
+DO_SURFACE_CYCLE=${DO_SURFACE_CYCLE:-TRUE}
 # Forecast lengths in hours for hourly and 00, 06, 12, and 18z cycles. Three hours is the
 # minimum for warm starts from the previous three cycles.
 FCST_LEN_HRS=${FCST_LEN_HRS:-3}

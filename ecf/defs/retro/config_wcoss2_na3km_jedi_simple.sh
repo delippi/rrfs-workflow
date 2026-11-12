@@ -127,13 +127,13 @@ DO_LONG_FORECAST=${DO_LONG_FORECAST:-TRUE}
 # following tasks; setup_retro_links.sh applies the matching workflow switches.
 # Smoke and dust need fix/smoke_dust/<grid>/grid_in.nc: available for NA 3 km but
 # unavailable for CONUS 13 km, where process_smoke would fail.
-RUN_SMOKE=${RUN_SMOKE:-FALSE}
+RUN_SMOKE=${RUN_SMOKE:-TRUE}
 # Spin-up cycles and their forecasts; without them, cold starts use DET_COLD_START_HRS.
 DO_SPINUP=${DO_SPINUP:-FALSE}
 DET_COLD_START_HRS=${DET_COLD_START_HRS:-"00 12"}
 EXTRN_MDL_ICS_OFFSET_HRS=${EXTRN_MDL_ICS_OFFSET_HRS:-6}
 GFS_FILE_FMT_ICS=${GFS_FILE_FMT_ICS:-grib2}
-DO_SURFACE_CYCLE=${DO_SURFACE_CYCLE:-FALSE}
+DO_SURFACE_CYCLE=${DO_SURFACE_CYCLE:-TRUE}
 # Forecast lengths in hours for hourly and 00, 06, 12, and 18z cycles. Three hours is the
 # minimum for warm starts from the previous three cycles.
 FCST_LEN_HRS=${FCST_LEN_HRS:-3}
